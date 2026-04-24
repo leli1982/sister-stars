@@ -1,5 +1,4 @@
 import { useState } from "react";
-import confetti from "canvas-confetti";
 
 export default function App() {
   const [scores, setScores] = useState({ sister1: 0, sister2: 0 });
@@ -9,12 +8,6 @@ export default function App() {
       ...prev,
       [key]: prev[key] + 1,
     }));
-
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
 
     alert("⭐ Star added!");
   };
