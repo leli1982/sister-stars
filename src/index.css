@@ -109,3 +109,99 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.pop {
+  animation: pop 0.3s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* background */
+.app {
+  font-family: Arial;
+  padding: 20px;
+  min-height: 100vh;
+  text-align: center;
+  background: linear-gradient(135deg, #ffe4f0, #e0e7ff);
+  overflow: hidden;
+}
+
+/* title */
+.title {
+  font-size: 36px;
+  margin-bottom: 20px;
+}
+
+/* cards */
+.card {
+  background: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+/* name input */
+.nameInput {
+  font-size: 18px;
+  text-align: center;
+  border: none;
+  border-bottom: 2px solid #ddd;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+/* score */
+.score {
+  font-size: 50px;
+  margin: 10px 0;
+}
+
+/* level */
+.level {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+/* button */
+.button {
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 25px;
+  border: none;
+  background: #ff4da6;
+  color: white;
+  cursor: pointer;
+}
+
+/* pop animation */
+.pop {
+  animation: pop 0.3s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* sparkle effect */
+.sparkle {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #fff, 0 0 20px #ff4da6;
+  animation: sparkleAnim 1s linear forwards;
+}
+
+@keyframes sparkleAnim {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}

@@ -1,37 +1,90 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import "./index.css";
 
 export default function App() {
-  const [scores, setScores] = useState({ sister1: 0, sister2: 0 });
+  const [players, setPlayers] = useState([
+    { id: "p1", name: "Princess 1", score: 0 },
+    { id: "p2", name: "Princess 2", score: 0 },
+  ]);
 
-  const addStar = (key) => {
-    setScores((prev) => ({
-      ...prev,
-      [key]: prev[key] + 1,
-    }));
+  // Load saved data
+  useEffect(() => {
+    const saved = localStorage.getItem("sisterStarsMagic");
+    if (saved) setPlayers(JSON.parse(saved));
+  }, []);
 
-    alert("⭐ Star added!");
+  // Save data
+  useEffect(() => {
+    localStorage.setItem("sisterStarsMagic", JSON.stringify(players));
+  }, [players]);
+
+  const getLevel = (score) => {
+    if (score >= 50) return "👑 Queen";
+    if (score >= 20) return "🌟 Hero";
+    if (score >= 10) return "✨ Star";
+    return "💖 Kind";
+  };
+
+  const addStar = (id) => {
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, score: p.score + 1 } : p
+      )
+    );
+
+    // magical sound
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/ambiences/magical_chime.ogg"
+    );
+    audio.play().catch(() => {});
+
+    // pop animation
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add("pop");
+      setTimeout(() => el.classList.remove("pop"), 300);
+    }
+
+    createSparkle();
+  };
+
+  const updateName = (id, newName) => {
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, name: newName } : p
+      )
+    );
+  };
+
+  // ✨ sparkles
+  const createSparkle = () => {
+    const sparkle = document.createElement("div");
+    sparkle.className = "sparkle";
+    sparkle.style.left = Math.random() * 100 + "vw";
+    sparkle.style.top = Math.random() * 100 + "vh";
+    document.body.appendChild(sparkle);
+
+    setTimeout(() => sparkle.remove(), 1000);
   };
 
   return (
-    <div style={{ fontFamily: "Arial", padding: 20 }}>
-      <h1>⭐ Sister Stars</h1>
+    <div className="app">
+      <h1 className="title">🪄 Sister Stars Magic</h1>
 
-      {["sister1", "sister2"].map((key) => (
-        <div
-          key={key}
-          style={{
-            border: "1px solid #ddd",
-            padding: 20,
-            marginBottom: 20,
-            borderRadius: 10,
-          }}
-        >
-          <h2>{key}</h2>
+      {players.map((p) => (
+        <div key={p.id} id={p.id} className="card">
+          <input
+            className="nameInput"
+            value={p.name}
+            onChange={(e) => updateName(p.id, e.target.value)}
+          />
 
-          <div style={{ fontSize: 40 }}>{scores[key]}</div>
+          <div className="score">{p.score}</div>
 
-          <button onClick={() => addStar(key)}>
-            +1 Star ⭐
+          <div className="level">{getLevel(p.score)}</div>
+
+          <button className="button" onClick={() => addStar(p.id)}>
+            ✨ Give Magic Star ✨
           </button>
         </div>
       ))}
