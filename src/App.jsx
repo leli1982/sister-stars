@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import "./index.css";
 
+import Sparkles from "./Sparkles";
+
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
@@ -11,9 +13,15 @@ export default function App() {
   const [soundOn, setSoundOn] = useState(true);
   const [message, setMessage] = useState("");
 
+  const shopItems = [
+    { name: "🍭 Candy", cost: 10 },
+    { name: "🎨 Sticker Pack", cost: 25 },
+    { name: "🧸 Teddy Hug", cost: 40 },
+  ];
+
   const [players, setPlayers] = useState([
-    { id: "p1", name: "Princess 1", score: 0 },
-    { id: "p2", name: "Princess 2", score: 0 },
+    { id: "p1", name: "Princess 1", score: 0, inventory: [] },
+    { id: "p2", name: "Princess 2", score: 0, inventory: [] },
   ]);
 
   const getLevel = (score) => {
@@ -25,11 +33,16 @@ export default function App() {
 
   useEffect(() => {
     const unsub = onSnapshot(docRef, (snap) => {
-      if (snap.exists()) {
-        setPlayers(snap.data().players);
-      } else {
-        setDoc(docRef, { players });
-      }
+      const data = snap.exists() ? snap.data().players : [];
+
+      const safe = (data || []).map((p) => ({
+        id: p.id || crypto.randomUUID(),
+        name: p.name || "Player",
+        score: p.score || 0,
+        inventory: p.inventory || [],
+      }));
+
+      setPlayers(safe);
     });
 
     return () => unsub();
@@ -58,36 +71,38 @@ export default function App() {
       if (p.id === id) {
         const newScore = p.score + 1;
 
-        // 🎉 normal confetti every click
         confetti({
-          particleCount: 60,
-          spread: 60,
+          particleCount: 70,
+          spread: 70,
           origin: { y: 0.6 },
         });
 
         playSound();
 
-        // 🏆 milestone rewards
-        if (newScore === 5) {
-          showMessage("🍭 Reward Unlocked: Sweet Beginner!");
-        }
-
-        if (newScore === 10) {
-          confetti({ particleCount: 150, spread: 90 });
-          showMessage("🌟 Reward: Star Badge unlocked!");
-        }
-
-        if (newScore === 20) {
-          confetti({ particleCount: 180, spread: 110 });
-          showMessage("🎁 Reward: Surprise Gift unlocked!");
-        }
-
-        if (newScore === 50) {
-          confetti({ particleCount: 250, spread: 130 });
-          showMessage("🪄 FINAL: MAGIC QUEEN MODE!");
-        }
-
         return { ...p, score: newScore };
+      }
+      return p;
+    });
+
+    save(updated);
+  };
+
+  const buyItem = (playerId, item) => {
+    const updated = players.map((p) => {
+      if (p.id === playerId) {
+        if (p.score < item.cost) {
+          showMessage("❌ Not enough stars!");
+          return p;
+        }
+
+        confetti({ particleCount: 120, spread: 100 });
+        showMessage(`🎁 Bought ${item.name}!`);
+
+        return {
+          ...p,
+          score: p.score - item.cost,
+          inventory: [...(p.inventory || []), item.name],
+        };
       }
       return p;
     });
@@ -105,13 +120,21 @@ export default function App() {
 
   const resetAll = () => {
     if (window.confirm("Reset all stars?")) {
-      save(players.map((p) => ({ ...p, score: 0 })));
+      save(
+        players.map((p) => ({
+          ...p,
+          score: 0,
+          inventory: [],
+        }))
+      );
     }
   };
 
   return (
     <div className="app">
-      <h1 className="title">🪄 Magic Sister Stars</h1>
+      <Sparkles />
+
+      <h1 className="title">🪄 Magic Sister Stars Shop</h1>
 
       <button
         className="soundBtn"
@@ -133,18 +156,36 @@ export default function App() {
               }
             />
 
-            <div className="level">
-              {getLevel(p.score)}
-            </div>
+            <div className="level">{getLevel(p.score)}</div>
 
-            <div className="score">{p.score}</div>
+            <div className="score">⭐ {p.score}</div>
 
             <button
               className="starButton"
               onClick={() => addStar(p.id)}
             >
-              ⭐ Give Magic Star
+              ⭐ Give Star
             </button>
+
+            <div className="shop">
+              {shopItems.map((item, i) => (
+                <button
+                  key={i}
+                  className="shopBtn"
+                  onClick={() => buyItem(p.id, item)}
+                >
+                  Buy {item.name} ({item.cost})
+                </button>
+              ))}
+            </div>
+
+            <div className="inventory">
+              {(p.inventory || []).map((i, idx) => (
+                <span key={idx} className="item">
+                  {i}
+                </span>
+              ))}
+            </div>
           </div>
         ))}
       </div>
