@@ -9,6 +9,7 @@ export default function App() {
   const docRef = doc(db, "game", "stars");
 
   const [soundOn, setSoundOn] = useState(true);
+  const [message, setMessage] = useState("");
 
   const [players, setPlayers] = useState([
     { id: "p1", name: "Princess 1", score: 0 },
@@ -22,7 +23,6 @@ export default function App() {
     return "💖 Kind Helper";
   };
 
-  // 🔄 Firebase sync
   useEffect(() => {
     const unsub = onSnapshot(docRef, (snap) => {
       if (snap.exists()) {
@@ -48,20 +48,9 @@ export default function App() {
     audio.play().catch(() => {});
   };
 
-  const bigConfetti = () => {
-    confetti({
-      particleCount: 150,
-      spread: 100,
-      origin: { y: 0.6 },
-    });
-  };
-
-  const smallConfetti = () => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
+  const showMessage = (text) => {
+    setMessage(text);
+    setTimeout(() => setMessage(""), 2500);
   };
 
   const addStar = (id) => {
@@ -69,25 +58,34 @@ export default function App() {
       if (p.id === id) {
         const newScore = p.score + 1;
 
-        // 🎯 milestone logic
-        if (
-          newScore === 10 ||
-          newScore === 25 ||
-          newScore === 50
-        ) {
-          setTimeout(() => bigConfetti(), 100);
-          setTimeout(
-            () =>
-              alert(
-                "🎁 Milestone unlocked! You are amazing!"
-              ),
-            300
-          );
-        } else {
-          smallConfetti();
-        }
+        // 🎉 normal confetti every click
+        confetti({
+          particleCount: 60,
+          spread: 60,
+          origin: { y: 0.6 },
+        });
 
         playSound();
+
+        // 🏆 milestone rewards
+        if (newScore === 5) {
+          showMessage("🍭 Reward Unlocked: Sweet Beginner!");
+        }
+
+        if (newScore === 10) {
+          confetti({ particleCount: 150, spread: 90 });
+          showMessage("🌟 Reward: Star Badge unlocked!");
+        }
+
+        if (newScore === 20) {
+          confetti({ particleCount: 180, spread: 110 });
+          showMessage("🎁 Reward: Surprise Gift unlocked!");
+        }
+
+        if (newScore === 50) {
+          confetti({ particleCount: 250, spread: 130 });
+          showMessage("🪄 FINAL: MAGIC QUEEN MODE!");
+        }
 
         return { ...p, score: newScore };
       }
@@ -121,6 +119,8 @@ export default function App() {
       >
         🔊 Sound: {soundOn ? "ON" : "OFF"}
       </button>
+
+      {message && <div className="popup">{message}</div>}
 
       <div className="grid">
         {players.map((p) => (
