@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import confetti from "canvas-confetti";
 import "./index.css";
 
 import { db } from "./firebase";
@@ -12,7 +13,15 @@ export default function App() {
     { id: "p2", name: "Princess 2", score: 0 },
   ]);
 
-  // 🔄 LIVE SYNC FROM FIREBASE
+  // 💖 Levels system
+  const getLevel = (score) => {
+    if (score >= 50) return "🪄 Magic Queen";
+    if (score >= 25) return "👑 Kind Hero";
+    if (score >= 10) return "🌟 Star Friend";
+    return "💖 Kind Helper";
+  };
+
+  // 🔄 Firebase sync
   useEffect(() => {
     const unsub = onSnapshot(docRef, (snap) => {
       if (snap.exists()) {
@@ -25,12 +34,13 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // ☁️ SAVE TO FIREBASE
-  const save = async (newPlayers) => {
-    setPlayers(newPlayers);
-    await setDoc(docRef, { players: newPlayers });
+  // ☁️ Save to Firebase
+  const save = async (data) => {
+    setPlayers(data);
+    await setDoc(docRef, { players: data });
   };
 
+  // 🎉 Add star + confetti
   const addStar = (id) => {
     const updated = players.map((p) =>
       p.id === id ? { ...p, score: p.score + 1 } : p
@@ -38,12 +48,14 @@ export default function App() {
 
     save(updated);
 
-    const audio = new Audio(
-      "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
-    );
-    audio.play().catch(() => {});
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
   };
 
+  // ✏️ Rename player
   const updateName = (id, value) => {
     const updated = players.map((p) =>
       p.id === id ? { ...p, name: value } : p
@@ -52,20 +64,21 @@ export default function App() {
     save(updated);
   };
 
+  // 🔄 Reset
   const resetAll = () => {
     if (window.confirm("Reset all stars?")) {
-      const updated = players.map((p) => ({
+      const reset = players.map((p) => ({
         ...p,
         score: 0,
       }));
 
-      save(updated);
+      save(reset);
     }
   };
 
   return (
     <div className="app">
-      <h1 className="title">⭐ Sister Stars Live</h1>
+      <h1 className="title">🪄 Sister Stars Magic Mode</h1>
 
       <div className="grid">
         {players.map((p) => (
@@ -78,20 +91,24 @@ export default function App() {
               }
             />
 
+            <div className="level">
+              {getLevel(p.score)}
+            </div>
+
             <div className="score">{p.score}</div>
 
             <button
               className="starButton"
               onClick={() => addStar(p.id)}
             >
-              ⭐ Give Star
+              ⭐ Give Magic Star
             </button>
           </div>
         ))}
       </div>
 
       <button className="resetButton" onClick={resetAll}>
-        Reset Scores
+        Reset
       </button>
     </div>
   );
