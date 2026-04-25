@@ -8,12 +8,13 @@ import { doc, onSnapshot, setDoc } from "firebase/firestore";
 export default function App() {
   const docRef = doc(db, "game", "stars");
 
+  const [soundOn, setSoundOn] = useState(true);
+
   const [players, setPlayers] = useState([
     { id: "p1", name: "Princess 1", score: 0 },
     { id: "p2", name: "Princess 2", score: 0 },
   ]);
 
-  // 💖 Levels system
   const getLevel = (score) => {
     if (score >= 50) return "🪄 Magic Queen";
     if (score >= 25) return "👑 Kind Hero";
@@ -34,28 +35,68 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // ☁️ Save to Firebase
   const save = async (data) => {
     setPlayers(data);
     await setDoc(docRef, { players: data });
   };
 
-  // 🎉 Add star + confetti
-  const addStar = (id) => {
-    const updated = players.map((p) =>
-      p.id === id ? { ...p, score: p.score + 1 } : p
+  const playSound = () => {
+    if (!soundOn) return;
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
     );
+    audio.play().catch(() => {});
+  };
 
-    save(updated);
-
+  const bigConfetti = () => {
     confetti({
-      particleCount: 100,
+      particleCount: 150,
+      spread: 100,
+      origin: { y: 0.6 },
+    });
+  };
+
+  const smallConfetti = () => {
+    confetti({
+      particleCount: 80,
       spread: 70,
       origin: { y: 0.6 },
     });
   };
 
-  // ✏️ Rename player
+  const addStar = (id) => {
+    const updated = players.map((p) => {
+      if (p.id === id) {
+        const newScore = p.score + 1;
+
+        // 🎯 milestone logic
+        if (
+          newScore === 10 ||
+          newScore === 25 ||
+          newScore === 50
+        ) {
+          setTimeout(() => bigConfetti(), 100);
+          setTimeout(
+            () =>
+              alert(
+                "🎁 Milestone unlocked! You are amazing!"
+              ),
+            300
+          );
+        } else {
+          smallConfetti();
+        }
+
+        playSound();
+
+        return { ...p, score: newScore };
+      }
+      return p;
+    });
+
+    save(updated);
+  };
+
   const updateName = (id, value) => {
     const updated = players.map((p) =>
       p.id === id ? { ...p, name: value } : p
@@ -64,21 +105,22 @@ export default function App() {
     save(updated);
   };
 
-  // 🔄 Reset
   const resetAll = () => {
     if (window.confirm("Reset all stars?")) {
-      const reset = players.map((p) => ({
-        ...p,
-        score: 0,
-      }));
-
-      save(reset);
+      save(players.map((p) => ({ ...p, score: 0 })));
     }
   };
 
   return (
     <div className="app">
-      <h1 className="title">🪄 Sister Stars Magic Mode</h1>
+      <h1 className="title">🪄 Magic Sister Stars</h1>
+
+      <button
+        className="soundBtn"
+        onClick={() => setSoundOn(!soundOn)}
+      >
+        🔊 Sound: {soundOn ? "ON" : "OFF"}
+      </button>
 
       <div className="grid">
         {players.map((p) => (
