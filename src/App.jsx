@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import "./index.css";
 
-import Sparkles from "./Sparkles";
-
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
@@ -132,7 +130,6 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sparkles />
 
       <h1 className="title">🪄 Magic Sister Stars Shop</h1>
 
