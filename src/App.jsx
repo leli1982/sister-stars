@@ -11,6 +11,7 @@ export default function App() {
   const [soundOn, setSoundOn] = useState(true);
   const [message, setMessage] = useState("");
   const [levelUp, setLevelUp] = useState(null);
+  const [mysteryReward, setMysteryReward] = useState(null);
 
   const avatars = [
     { label: "Princess", value: "princess.png", unlockAt: 0 },
@@ -25,6 +26,17 @@ export default function App() {
     { name: "🍭 Candy", cost: 10 },
     { name: "🎨 Sticker Pack", cost: 25 },
     { name: "🧸 Teddy Hug", cost: 40 },
+    { name: "🎁 Mystery Box", cost: 30, mystery: true },
+  ];
+
+  const mysteryRewards = [
+    "🍦 Ice Cream Treat",
+    "🎬 Movie Night",
+    "🧁 Cupcake",
+    "🎮 Game Time",
+    "🧸 Extra Teddy Hug",
+    "🌈 Surprise Reward",
+    "👑 Princess Choice",
   ];
 
   const levels = [
@@ -263,6 +275,32 @@ export default function App() {
           return p;
         }
 
+        if (item.mystery) {
+          const reward =
+            mysteryRewards[
+              Math.floor(Math.random() * mysteryRewards.length)
+            ];
+
+          confetti({
+            particleCount: 260,
+            spread: 180,
+            origin: { y: 0.55 },
+          });
+
+          playLevelUpSound();
+
+          setMysteryReward({
+            playerName: p.name,
+            reward,
+          });
+
+          return {
+            ...p,
+            score: p.score - item.cost,
+            inventory: [...(p.inventory || []), reward],
+          };
+        }
+
         confetti({
           particleCount: 120,
           spread: 100,
@@ -326,6 +364,33 @@ export default function App() {
               }}
             >
               Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mysteryReward && (
+        <div className="levelUpOverlay">
+          <div className="levelUpCard" style={{ borderColor: "#ff4fa3" }}>
+            <div className="levelUpStars">🎁✨🎉</div>
+
+            <h2 style={{ color: "#ff4fa3" }}>MYSTERY REWARD!</h2>
+
+            <p className="levelUpName">{mysteryReward.playerName}</p>
+
+            <p className="levelUpScore">You opened the magic box and got:</p>
+
+            <p className="levelUpTitle">{mysteryReward.reward}</p>
+
+            <button
+              className="levelUpButton"
+              onClick={() => setMysteryReward(null)}
+              style={{
+                background: "#ff4fa3",
+                boxShadow: `0 8px 0 rgba(0,0,0,0.25)`,
+              }}
+            >
+              Yay!
             </button>
           </div>
         </div>
