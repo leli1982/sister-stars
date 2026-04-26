@@ -28,9 +28,27 @@ export default function App() {
   ];
 
   const levels = [
-    { score: 10, title: "🌟 Star Friend" },
-    { score: 25, title: "👑 Kind Hero" },
-    { score: 50, title: "🪄 Magic Queen" },
+    {
+      score: 10,
+      title: "🌟 Star Friend",
+      emoji: "🌟✨💫",
+      message: "You are shining bright!",
+      color: "#ffb703",
+    },
+    {
+      score: 25,
+      title: "👑 Kind Hero",
+      emoji: "👑💖✨",
+      message: "Your kindness is powerful!",
+      color: "#ff4fa3",
+    },
+    {
+      score: 50,
+      title: "🪄 Magic Queen",
+      emoji: "🪄🌈✨",
+      message: "You are full of magic!",
+      color: "#8b2be2",
+    },
   ];
 
   const [players, setPlayers] = useState([
@@ -137,28 +155,36 @@ export default function App() {
     setTimeout(() => setMessage(""), 2500);
   };
 
-  const showLevelUpCelebration = (playerName, levelTitle, score) => {
+  const showLevelUpCelebration = (playerName, level, score) => {
     setLevelUp({
       playerName,
-      levelTitle,
+      level,
       score,
     });
 
     playLevelUpSound();
 
     confetti({
-      particleCount: 250,
-      spread: 160,
+      particleCount: 300,
+      spread: 180,
       origin: { y: 0.55 },
     });
 
     setTimeout(() => {
       confetti({
-        particleCount: 200,
-        spread: 180,
+        particleCount: 220,
+        spread: 200,
         origin: { y: 0.6 },
       });
-    }, 600);
+    }, 500);
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 180,
+        spread: 160,
+        origin: { y: 0.45 },
+      });
+    }, 1000);
   };
 
   const addStar = (id) => {
@@ -184,7 +210,7 @@ export default function App() {
         );
 
         if (unlockedLevel) {
-          showLevelUpCelebration(p.name, unlockedLevel.title, newScore);
+          showLevelUpCelebration(p.name, unlockedLevel, newScore);
         } else if (unlockedAvatar && unlockedAvatar.unlockAt > 0) {
           confetti({
             particleCount: 180,
@@ -275,22 +301,29 @@ export default function App() {
     <div className="app">
       {levelUp && (
         <div className="levelUpOverlay">
-          <div className="levelUpCard">
-            <div className="levelUpStars">✨🌟✨</div>
+          <div
+            className="levelUpCard"
+            style={{ borderColor: levelUp.level.color }}
+          >
+            <div className="levelUpStars">{levelUp.level.emoji}</div>
 
-            <h2>LEVEL UP!</h2>
+            <h2 style={{ color: levelUp.level.color }}>LEVEL UP!</h2>
 
             <p className="levelUpName">{levelUp.playerName}</p>
 
-            <p className="levelUpTitle">{levelUp.levelTitle}</p>
+            <p className="levelUpTitle">{levelUp.level.title}</p>
 
-            <p className="levelUpScore">
-              You reached {levelUp.score} stars!
-            </p>
+            <p className="levelUpScore">{levelUp.level.message}</p>
+
+            <p className="levelUpScore">⭐ {levelUp.score} stars!</p>
 
             <button
               className="levelUpButton"
               onClick={() => setLevelUp(null)}
+              style={{
+                background: levelUp.level.color,
+                boxShadow: `0 8px 0 rgba(0,0,0,0.25)`,
+              }}
             >
               Continue
             </button>
