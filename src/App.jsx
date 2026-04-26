@@ -12,12 +12,12 @@ export default function App() {
   const [message, setMessage] = useState("");
 
   const avatars = [
-    { label: "Princess", value: "princess.png" },
-    { label: "Fairy", value: "fairy.png" },
-    { label: "Unicorn", value: "unicorn.png" },
-    { label: "Mermaid", value: "mermaid.png" },
-    { label: "Hero", value: "hero.png" },
-    { label: "Cat", value: "cat.png" },
+    { label: "Princess", value: "princess.png", unlockAt: 0 },
+    { label: "Fairy", value: "fairy.png", unlockAt: 0 },
+    { label: "Unicorn", value: "unicorn.png", unlockAt: 10 },
+    { label: "Mermaid", value: "mermaid.png", unlockAt: 20 },
+    { label: "Hero", value: "hero.png", unlockAt: 30 },
+    { label: "Cat", value: "cat.png", unlockAt: 40 },
   ];
 
   const shopItems = [
@@ -48,6 +48,14 @@ export default function App() {
     if (score >= 25) return "👑 Kind Hero";
     if (score >= 10) return "🌟 Star Friend";
     return "💖 Kind Helper";
+  };
+
+  const getAvailableAvatars = (score) => {
+    return avatars.filter((avatar) => score >= avatar.unlockAt);
+  };
+
+  const getNextAvatarUnlock = (score) => {
+    return avatars.find((avatar) => score < avatar.unlockAt);
   };
 
   useEffect(() => {
@@ -105,15 +113,23 @@ export default function App() {
 
         playSound();
 
-        if (newScore === 10) {
+        const unlockedAvatar = avatars.find(
+          (avatar) => avatar.unlockAt === newScore
+        );
+
+        if (unlockedAvatar && unlockedAvatar.unlockAt > 0) {
+          confetti({
+            particleCount: 180,
+            spread: 120,
+            origin: { y: 0.6 },
+          });
+
+          showMessage(`🎉 New avatar unlocked: ${unlockedAvatar.label}!`);
+        } else if (newScore === 10) {
           showMessage("🌟 10 Stars! Star Friend unlocked!");
-        }
-
-        if (newScore === 25) {
+        } else if (newScore === 25) {
           showMessage("👑 25 Stars! Kind Hero unlocked!");
-        }
-
-        if (newScore === 50) {
+        } else if (newScore === 50) {
           showMessage("🪄 50 Stars! Magic Queen unlocked!");
         }
 
@@ -135,9 +151,18 @@ export default function App() {
   };
 
   const updateAvatar = (id, value) => {
-    const updated = players.map((p) =>
-      p.id === id ? { ...p, avatar: value } : p
-    );
+    const updated = players.map((p) => {
+      if (p.id !== id) return p;
+
+      const avatar = avatars.find((a) => a.value === value);
+
+      if (!avatar || p.score < avatar.unlockAt) {
+        showMessage("🔒 Avatar locked!");
+        return p;
+      }
+
+      return { ...p, avatar: value };
+    });
 
     save(updated);
   };
@@ -178,9 +203,7 @@ export default function App() {
           ...p,
           score: 0,
           inventory: [],
-          avatar:
-            p.avatar ||
-            (index === 0 ? "princess.png" : "fairy.png"),
+          avatar: index === 0 ? "princess.png" : "fairy.png",
         }))
       );
     }
@@ -200,64 +223,75 @@ export default function App() {
       {message && <div className="popup">{message}</div>}
 
       <div className="grid">
-        {players.map((p) => (
-          <div className="card" key={p.id}>
-            <img
-              className="avatar"
-              src={`/avatars/${p.avatar || "princess.png"}`}
-              alt={`${p.name} avatar`}
-            />
+        {players.map((p) => {
+          const availableAvatars = getAvailableAvatars(p.score);
+          const nextUnlock = getNextAvatarUnlock(p.score);
 
-            <select
-              className="avatarSelect"
-              value={p.avatar || "princess.png"}
-              onChange={(e) => updateAvatar(p.id, e.target.value)}
-            >
-              {avatars.map((avatar) => (
-                <option key={avatar.value} value={avatar.value}>
-                  {avatar.label}
-                </option>
-              ))}
-            </select>
+          return (
+            <div className="card" key={p.id}>
+              <img
+                className="avatar"
+                src={`/avatars/${p.avatar || "princess.png"}`}
+                alt={`${p.name} avatar`}
+              />
 
-            <input
-              className="nameInput"
-              value={p.name}
-              onChange={(e) => updateName(p.id, e.target.value)}
-            />
+              <select
+                className="avatarSelect"
+                value={p.avatar || "princess.png"}
+                onChange={(e) => updateAvatar(p.id, e.target.value)}
+              >
+                {availableAvatars.map((avatar) => (
+                  <option key={avatar.value} value={avatar.value}>
+                    {avatar.label}
+                  </option>
+                ))}
+              </select>
 
-            <div className="level">{getLevel(p.score)}</div>
+              {nextUnlock && (
+                <div className="nextUnlock">
+                  🔒 Next avatar: {nextUnlock.label} at {nextUnlock.unlockAt} stars
+                </div>
+              )}
 
-            <div className="score">⭐ {p.score}</div>
+              <input
+                className="nameInput"
+                value={p.name}
+                onChange={(e) => updateName(p.id, e.target.value)}
+              />
 
-            <button
-              className="starButton"
-              onClick={() => addStar(p.id)}
-            >
-              ⭐ Give Star
-            </button>
+              <div className="level">{getLevel(p.score)}</div>
 
-            <div className="shop">
-              {shopItems.map((item, i) => (
-                <button
-                  key={i}
-                  className="shopBtn"
-                  onClick={() => buyItem(p.id, item)}
-                >
-                  Buy {item.name} ({item.cost})
-                </button>
-              ))}
+              <div className="score">⭐ {p.score}</div>
+
+              <button
+                className="starButton"
+                onClick={() => addStar(p.id)}
+              >
+                ⭐ Give Star
+              </button>
+
+              <div className="shop">
+                {shopItems.map((item, i) => (
+                  <button
+                    key={i}
+                    className="shopBtn"
+                    onClick={() => buyItem(p.id, item)}
+                  >
+                    Buy {item.name} ({item.cost})
+                  </button>
+                ))}
+              </div>
+
+              <div className="inventory">
+                {(p.inventory || []).map((item, index) => (
+                  <span key={index} className="item">
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
-
-            <div className="inventory">
-              {(p.inventory || []).map((item, index) => (
-                <span key={index} className="item">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <button className="resetButton" onClick={resetAll}>

@@ -140,3 +140,9 @@ body {
   background: white;
   font-size: 12px;
 }
+
+.nextUnlock {
+  font-size: 12px;
+  margin: 4px 0 8px;
+  opacity: 0.75;
+}
