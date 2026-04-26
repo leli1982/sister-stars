@@ -70,6 +70,8 @@ export default function App() {
       score: 0,
       inventory: [],
       avatar: "princess.png",
+      streak: 0,
+      lastStarDate: "",
     },
     {
       id: "p2",
@@ -77,8 +79,27 @@ export default function App() {
       score: 0,
       inventory: [],
       avatar: "fairy.png",
+      streak: 0,
+      lastStarDate: "",
     },
   ]);
+
+  const getToday = () => {
+    return new Date().toISOString().split("T")[0];
+  };
+
+  const getYesterday = () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return date.toISOString().split("T")[0];
+  };
+
+  const getStreakBonus = (streak) => {
+    if (streak >= 7) return 5;
+    if (streak >= 3) return 2;
+    if (streak >= 2) return 1;
+    return 0;
+  };
 
   const getLevel = (score) => {
     if (score >= 50) return "🪄 Magic Queen";
@@ -127,6 +148,8 @@ export default function App() {
         avatar:
           p.avatar ||
           (index === 0 ? "princess.png" : "fairy.png"),
+        streak: p.streak || 0,
+        lastStarDate: p.lastStarDate || "",
       }));
 
       if (safePlayers.length > 0) {
@@ -164,7 +187,7 @@ export default function App() {
 
   const showMessage = (text) => {
     setMessage(text);
-    setTimeout(() => setMessage(""), 2500);
+    setTimeout(() => setMessage(""), 3000);
   };
 
   const showLevelUpCelebration = (playerName, level, score) => {
@@ -200,21 +223,45 @@ export default function App() {
   };
 
   const addStar = (id) => {
+    const today = getToday();
+    const yesterday = getYesterday();
+
     const updated = players.map((p) => {
       if (p.id === id) {
         const oldScore = p.score;
-        const newScore = p.score + 1;
+
+        let newStreak = p.streak || 0;
+        let bonusStars = 0;
+
+        if (p.lastStarDate !== today) {
+          if (p.lastStarDate === yesterday) {
+            newStreak += 1;
+          } else {
+            newStreak = 1;
+          }
+
+          bonusStars = getStreakBonus(newStreak);
+        }
+
+        const newScore = p.score + 1 + bonusStars;
 
         confetti({
-          particleCount: 70,
-          spread: 70,
+          particleCount: bonusStars > 0 ? 150 : 70,
+          spread: bonusStars > 0 ? 120 : 70,
           origin: { y: 0.6 },
         });
 
         playSound();
 
+        if (bonusStars > 0) {
+          showMessage(
+            `🔥 ${p.name} has a ${newStreak}-day streak! Bonus +${bonusStars} stars!`
+          );
+        }
+
         const unlockedAvatar = avatars.find(
-          (avatar) => avatar.unlockAt === newScore
+          (avatar) =>
+            oldScore < avatar.unlockAt && newScore >= avatar.unlockAt
         );
 
         const unlockedLevel = levels.find(
@@ -233,7 +280,12 @@ export default function App() {
           showMessage(`🎉 New avatar unlocked: ${unlockedAvatar.label}!`);
         }
 
-        return { ...p, score: newScore };
+        return {
+          ...p,
+          score: newScore,
+          streak: newStreak,
+          lastStarDate: today,
+        };
       }
 
       return p;
@@ -323,13 +375,15 @@ export default function App() {
   };
 
   const resetAll = () => {
-    if (window.confirm("Reset all stars and rewards?")) {
+    if (window.confirm("Reset all stars, rewards, and streaks?")) {
       save(
         players.map((p, index) => ({
           ...p,
           score: 0,
           inventory: [],
           avatar: index === 0 ? "princess.png" : "fairy.png",
+          streak: 0,
+          lastStarDate: "",
         }))
       );
     }
@@ -469,6 +523,16 @@ export default function App() {
               <div className="level">{getLevel(p.score)}</div>
 
               <div className="score">⭐ {p.score}</div>
+
+              <div className="unlockBox">
+                <div className="nextUnlock">
+                  🔥 Daily Streak: {p.streak || 0} day
+                  {(p.streak || 0) === 1 ? "" : "s"}
+                </div>
+                <div className="progressText">
+                  Day 2 bonus: +1 ⭐ | Day 3 bonus: +2 ⭐ | Day 7 bonus: +5 ⭐
+                </div>
+              </div>
 
               <button
                 className="starButton"
