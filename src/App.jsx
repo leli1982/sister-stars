@@ -58,6 +58,26 @@ export default function App() {
     return avatars.find((avatar) => score < avatar.unlockAt);
   };
 
+  const getPreviousUnlock = (score) => {
+    const unlocked = avatars
+      .filter((avatar) => score >= avatar.unlockAt)
+      .map((avatar) => avatar.unlockAt);
+
+    return Math.max(...unlocked, 0);
+  };
+
+  const getProgressToNextAvatar = (score) => {
+    const next = getNextAvatarUnlock(score);
+
+    if (!next) return 100;
+
+    const previous = getPreviousUnlock(score);
+    const progress =
+      ((score - previous) / (next.unlockAt - previous)) * 100;
+
+    return Math.min(Math.max(progress, 0), 100);
+  };
+
   useEffect(() => {
     const unsub = onSnapshot(docRef, (snap) => {
       const data = snap.exists() ? snap.data().players : [];
@@ -226,6 +246,7 @@ export default function App() {
         {players.map((p) => {
           const availableAvatars = getAvailableAvatars(p.score);
           const nextUnlock = getNextAvatarUnlock(p.score);
+          const progress = getProgressToNextAvatar(p.score);
 
           return (
             <div className="card" key={p.id}>
@@ -247,9 +268,30 @@ export default function App() {
                 ))}
               </select>
 
-              {nextUnlock && (
-                <div className="nextUnlock">
-                  🔒 Next avatar: {nextUnlock.label} at {nextUnlock.unlockAt} stars
+              {nextUnlock ? (
+                <div className="unlockBox">
+                  <div className="nextUnlock">
+                    🔒 Next avatar: {nextUnlock.label} at{" "}
+                    {nextUnlock.unlockAt} stars
+                  </div>
+
+                  <div className="progressOuter">
+                    <div
+                      className="progressInner"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+
+                  <div className="progressText">
+                    {p.score} / {nextUnlock.unlockAt} stars
+                  </div>
+                </div>
+              ) : (
+                <div className="unlockBox">
+                  <div className="nextUnlock">🎉 All avatars unlocked!</div>
+                  <div className="progressOuter">
+                    <div className="progressInner" style={{ width: "100%" }} />
+                  </div>
                 </div>
               )}
 
