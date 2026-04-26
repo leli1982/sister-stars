@@ -10,6 +10,7 @@ export default function App() {
 
   const [soundOn, setSoundOn] = useState(true);
   const [message, setMessage] = useState("");
+  const [levelUp, setLevelUp] = useState(null);
 
   const avatars = [
     { label: "Princess", value: "princess.png", unlockAt: 0 },
@@ -24,6 +25,12 @@ export default function App() {
     { name: "🍭 Candy", cost: 10 },
     { name: "🎨 Sticker Pack", cost: 25 },
     { name: "🧸 Teddy Hug", cost: 40 },
+  ];
+
+  const levels = [
+    { score: 10, title: "🌟 Star Friend" },
+    { score: 25, title: "👑 Kind Hero" },
+    { score: 50, title: "🪄 Magic Queen" },
   ];
 
   const [players, setPlayers] = useState([
@@ -115,14 +122,49 @@ export default function App() {
     audio.play().catch(() => {});
   };
 
+  const playLevelUpSound = () => {
+    if (!soundOn) return;
+
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+    );
+
+    audio.play().catch(() => {});
+  };
+
   const showMessage = (text) => {
     setMessage(text);
     setTimeout(() => setMessage(""), 2500);
   };
 
+  const showLevelUpCelebration = (playerName, levelTitle, score) => {
+    setLevelUp({
+      playerName,
+      levelTitle,
+      score,
+    });
+
+    playLevelUpSound();
+
+    confetti({
+      particleCount: 250,
+      spread: 160,
+      origin: { y: 0.55 },
+    });
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 200,
+        spread: 180,
+        origin: { y: 0.6 },
+      });
+    }, 600);
+  };
+
   const addStar = (id) => {
     const updated = players.map((p) => {
       if (p.id === id) {
+        const oldScore = p.score;
         const newScore = p.score + 1;
 
         confetti({
@@ -137,7 +179,13 @@ export default function App() {
           (avatar) => avatar.unlockAt === newScore
         );
 
-        if (unlockedAvatar && unlockedAvatar.unlockAt > 0) {
+        const unlockedLevel = levels.find(
+          (level) => oldScore < level.score && newScore >= level.score
+        );
+
+        if (unlockedLevel) {
+          showLevelUpCelebration(p.name, unlockedLevel.title, newScore);
+        } else if (unlockedAvatar && unlockedAvatar.unlockAt > 0) {
           confetti({
             particleCount: 180,
             spread: 120,
@@ -145,12 +193,6 @@ export default function App() {
           });
 
           showMessage(`🎉 New avatar unlocked: ${unlockedAvatar.label}!`);
-        } else if (newScore === 10) {
-          showMessage("🌟 10 Stars! Star Friend unlocked!");
-        } else if (newScore === 25) {
-          showMessage("👑 25 Stars! Kind Hero unlocked!");
-        } else if (newScore === 50) {
-          showMessage("🪄 50 Stars! Magic Queen unlocked!");
         }
 
         return { ...p, score: newScore };
@@ -231,6 +273,31 @@ export default function App() {
 
   return (
     <div className="app">
+      {levelUp && (
+        <div className="levelUpOverlay">
+          <div className="levelUpCard">
+            <div className="levelUpStars">✨🌟✨</div>
+
+            <h2>LEVEL UP!</h2>
+
+            <p className="levelUpName">{levelUp.playerName}</p>
+
+            <p className="levelUpTitle">{levelUp.levelTitle}</p>
+
+            <p className="levelUpScore">
+              You reached {levelUp.score} stars!
+            </p>
+
+            <button
+              className="levelUpButton"
+              onClick={() => setLevelUp(null)}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="title">🪄 Magic Sister Stars</h1>
 
       <button
