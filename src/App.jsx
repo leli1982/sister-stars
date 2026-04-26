@@ -11,6 +11,15 @@ export default function App() {
   const [soundOn, setSoundOn] = useState(true);
   const [message, setMessage] = useState("");
 
+  const avatars = [
+    { label: "Princess", value: "princess.png" },
+    { label: "Fairy", value: "fairy.png" },
+    { label: "Unicorn", value: "unicorn.png" },
+    { label: "Mermaid", value: "mermaid.png" },
+    { label: "Hero", value: "hero.png" },
+    { label: "Cat", value: "cat.png" },
+  ];
+
   const shopItems = [
     { name: "🍭 Candy", cost: 10 },
     { name: "🎨 Sticker Pack", cost: 25 },
@@ -18,8 +27,20 @@ export default function App() {
   ];
 
   const [players, setPlayers] = useState([
-    { id: "p1", name: "Princess 1", score: 0, inventory: [] },
-    { id: "p2", name: "Princess 2", score: 0, inventory: [] },
+    {
+      id: "p1",
+      name: "Princess 1",
+      score: 0,
+      inventory: [],
+      avatar: "princess.png",
+    },
+    {
+      id: "p2",
+      name: "Princess 2",
+      score: 0,
+      inventory: [],
+      avatar: "fairy.png",
+    },
   ]);
 
   const getLevel = (score) => {
@@ -33,14 +54,19 @@ export default function App() {
     const unsub = onSnapshot(docRef, (snap) => {
       const data = snap.exists() ? snap.data().players : [];
 
-      const safe = (data || []).map((p) => ({
-        id: p.id || crypto.randomUUID(),
-        name: p.name || "Player",
+      const safePlayers = (data || []).map((p, index) => ({
+        id: p.id || `p${index + 1}`,
+        name: p.name || `Princess ${index + 1}`,
         score: p.score || 0,
         inventory: p.inventory || [],
+        avatar:
+          p.avatar ||
+          (index === 0 ? "princess.png" : "fairy.png"),
       }));
 
-      setPlayers(safe);
+      if (safePlayers.length > 0) {
+        setPlayers(safePlayers);
+      }
     });
 
     return () => unsub();
@@ -53,9 +79,11 @@ export default function App() {
 
   const playSound = () => {
     if (!soundOn) return;
+
     const audio = new Audio(
       "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
     );
+
     audio.play().catch(() => {});
   };
 
@@ -77,31 +105,21 @@ export default function App() {
 
         playSound();
 
-        return { ...p, score: newScore };
-      }
-      return p;
-    });
-
-    save(updated);
-  };
-
-  const buyItem = (playerId, item) => {
-    const updated = players.map((p) => {
-      if (p.id === playerId) {
-        if (p.score < item.cost) {
-          showMessage("❌ Not enough stars!");
-          return p;
+        if (newScore === 10) {
+          showMessage("🌟 10 Stars! Star Friend unlocked!");
         }
 
-        confetti({ particleCount: 120, spread: 100 });
-        showMessage(`🎁 Bought ${item.name}!`);
+        if (newScore === 25) {
+          showMessage("👑 25 Stars! Kind Hero unlocked!");
+        }
 
-        return {
-          ...p,
-          score: p.score - item.cost,
-          inventory: [...(p.inventory || []), item.name],
-        };
+        if (newScore === 50) {
+          showMessage("🪄 50 Stars! Magic Queen unlocked!");
+        }
+
+        return { ...p, score: newScore };
       }
+
       return p;
     });
 
@@ -116,13 +134,53 @@ export default function App() {
     save(updated);
   };
 
+  const updateAvatar = (id, value) => {
+    const updated = players.map((p) =>
+      p.id === id ? { ...p, avatar: value } : p
+    );
+
+    save(updated);
+  };
+
+  const buyItem = (playerId, item) => {
+    const updated = players.map((p) => {
+      if (p.id === playerId) {
+        if (p.score < item.cost) {
+          showMessage("❌ Not enough stars!");
+          return p;
+        }
+
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { y: 0.6 },
+        });
+
+        showMessage(`🎁 Bought ${item.name}!`);
+
+        return {
+          ...p,
+          score: p.score - item.cost,
+          inventory: [...(p.inventory || []), item.name],
+        };
+      }
+
+      return p;
+    });
+
+    save(updated);
+  };
+
   const resetAll = () => {
-    if (window.confirm("Reset all stars?")) {
+    if (window.confirm("Reset all stars and rewards?")) {
       save(
-        players.map((p) => ({
+        players.map((p, index) => ({
           ...p,
           score: 0,
           inventory: [],
+          avatar:
+            p.avatar ||
+            (index === 0 ? "princess.png" : "fairy.png"),
         }))
       );
     }
@@ -130,8 +188,7 @@ export default function App() {
 
   return (
     <div className="app">
-
-      <h1 className="title">🪄 Magic Sister Stars Shop</h1>
+      <h1 className="title">🪄 Magic Sister Stars</h1>
 
       <button
         className="soundBtn"
@@ -145,12 +202,28 @@ export default function App() {
       <div className="grid">
         {players.map((p) => (
           <div className="card" key={p.id}>
+            <img
+              className="avatar"
+              src={`/avatars/${p.avatar || "princess.png"}`}
+              alt={`${p.name} avatar`}
+            />
+
+            <select
+              className="avatarSelect"
+              value={p.avatar || "princess.png"}
+              onChange={(e) => updateAvatar(p.id, e.target.value)}
+            >
+              {avatars.map((avatar) => (
+                <option key={avatar.value} value={avatar.value}>
+                  {avatar.label}
+                </option>
+              ))}
+            </select>
+
             <input
               className="nameInput"
               value={p.name}
-              onChange={(e) =>
-                updateName(p.id, e.target.value)
-              }
+              onChange={(e) => updateName(p.id, e.target.value)}
             />
 
             <div className="level">{getLevel(p.score)}</div>
@@ -177,9 +250,9 @@ export default function App() {
             </div>
 
             <div className="inventory">
-              {(p.inventory || []).map((i, idx) => (
-                <span key={idx} className="item">
-                  {i}
+              {(p.inventory || []).map((item, index) => (
+                <span key={index} className="item">
+                  {item}
                 </span>
               ))}
             </div>
