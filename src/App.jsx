@@ -14,6 +14,7 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [levelUp, setLevelUp] = useState(null);
   const [mysteryReward, setMysteryReward] = useState(null);
+  const [dailyReward, setDailyReward] = useState(null);
   const [parentMode, setParentMode] = useState(false);
   const [showPinBox, setShowPinBox] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -42,6 +43,16 @@ export default function App() {
     "🧸 Extra Teddy Hug",
     "🌈 Surprise Reward",
     "👑 Princess Choice",
+  ];
+
+  const wheelRewards = [
+    { label: "⭐ +3 Stars", stars: 3, item: null },
+    { label: "⭐ +5 Stars", stars: 5, item: null },
+    { label: "⭐ +10 Stars", stars: 10, item: null },
+    { label: "🍭 Candy Bonus", stars: 0, item: "🍭 Candy Bonus" },
+    { label: "🎨 Sticker Bonus", stars: 0, item: "🎨 Sticker Bonus" },
+    { label: "🧸 Teddy Bonus", stars: 0, item: "🧸 Teddy Bonus" },
+    { label: "🌈 Rainbow Jackpot +15 Stars", stars: 15, item: "🌈 Rainbow Jackpot" },
   ];
 
   const levels = [
@@ -77,6 +88,7 @@ export default function App() {
       avatar: "princess.png",
       streak: 0,
       lastStarDate: "",
+      lastSpinDate: "",
     },
     {
       id: "p2",
@@ -86,6 +98,7 @@ export default function App() {
       avatar: "fairy.png",
       streak: 0,
       lastStarDate: "",
+      lastSpinDate: "",
     },
   ]);
 
@@ -159,6 +172,7 @@ export default function App() {
           (index === 0 ? "princess.png" : "fairy.png"),
         streak: p.streak || 0,
         lastStarDate: p.lastStarDate || "",
+        lastSpinDate: p.lastSpinDate || "",
       }));
 
       if (safePlayers.length > 0) {
@@ -250,6 +264,75 @@ export default function App() {
     }, 1000);
   };
 
+  const checkUnlocks = (playerName, oldScore, newScore) => {
+    const unlockedAvatar = avatars.find(
+      (avatar) =>
+        oldScore < avatar.unlockAt && newScore >= avatar.unlockAt
+    );
+
+    const unlockedLevel = levels.find(
+      (level) => oldScore < level.score && newScore >= level.score
+    );
+
+    if (unlockedLevel) {
+      showLevelUpCelebration(playerName, unlockedLevel, newScore);
+    } else if (unlockedAvatar && unlockedAvatar.unlockAt > 0) {
+      confetti({
+        particleCount: 180,
+        spread: 120,
+        origin: { y: 0.6 },
+      });
+
+      showMessage(`🎉 New avatar unlocked: ${unlockedAvatar.label}!`);
+    }
+  };
+
+  const spinDailyWheel = (id) => {
+    const today = getToday();
+
+    const updated = players.map((p) => {
+      if (p.id !== id) return p;
+
+      if (p.lastSpinDate === today) {
+        showMessage("🎡 Daily wheel already used today!");
+        return p;
+      }
+
+      const reward =
+        wheelRewards[Math.floor(Math.random() * wheelRewards.length)];
+
+      const oldScore = p.score;
+      const newScore = p.score + reward.stars;
+      const newInventory = reward.item
+        ? [...(p.inventory || []), reward.item]
+        : p.inventory || [];
+
+      setDailyReward({
+        playerName: p.name,
+        reward: reward.label,
+      });
+
+      playLevelUpSound();
+
+      confetti({
+        particleCount: reward.stars >= 15 ? 320 : 220,
+        spread: reward.stars >= 15 ? 200 : 160,
+        origin: { y: 0.55 },
+      });
+
+      checkUnlocks(p.name, oldScore, newScore);
+
+      return {
+        ...p,
+        score: newScore,
+        inventory: newInventory,
+        lastSpinDate: today,
+      };
+    });
+
+    save(updated);
+  };
+
   const addStar = (id) => {
     const today = getToday();
     const yesterday = getYesterday();
@@ -287,26 +370,7 @@ export default function App() {
           );
         }
 
-        const unlockedAvatar = avatars.find(
-          (avatar) =>
-            oldScore < avatar.unlockAt && newScore >= avatar.unlockAt
-        );
-
-        const unlockedLevel = levels.find(
-          (level) => oldScore < level.score && newScore >= level.score
-        );
-
-        if (unlockedLevel) {
-          showLevelUpCelebration(p.name, unlockedLevel, newScore);
-        } else if (unlockedAvatar && unlockedAvatar.unlockAt > 0) {
-          confetti({
-            particleCount: 180,
-            spread: 120,
-            origin: { y: 0.6 },
-          });
-
-          showMessage(`🎉 New avatar unlocked: ${unlockedAvatar.label}!`);
-        }
+        checkUnlocks(p.name, oldScore, newScore);
 
         return {
           ...p,
@@ -408,7 +472,7 @@ export default function App() {
       return;
     }
 
-    if (window.confirm("Reset all stars, rewards, and streaks?")) {
+    if (window.confirm("Reset all stars, rewards, streaks, and daily spins?")) {
       save(
         players.map((p, index) => ({
           ...p,
@@ -417,6 +481,7 @@ export default function App() {
           avatar: index === 0 ? "princess.png" : "fairy.png",
           streak: 0,
           lastStarDate: "",
+          lastSpinDate: "",
         }))
       );
     }
@@ -483,6 +548,33 @@ export default function App() {
         </div>
       )}
 
+      {dailyReward && (
+        <div className="levelUpOverlay">
+          <div className="levelUpCard" style={{ borderColor: "#ffb703" }}>
+            <div className="levelUpStars">🎡✨🎁</div>
+
+            <h2 style={{ color: "#ffb703" }}>DAILY WHEEL!</h2>
+
+            <p className="levelUpName">{dailyReward.playerName}</p>
+
+            <p className="levelUpScore">The magic wheel landed on:</p>
+
+            <p className="levelUpTitle">{dailyReward.reward}</p>
+
+            <button
+              className="levelUpButton"
+              onClick={() => setDailyReward(null)}
+              style={{
+                background: "#ffb703",
+                boxShadow: `0 8px 0 rgba(0,0,0,0.25)`,
+              }}
+            >
+              Amazing!
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="title">🪄 Magic Sister Stars</h1>
 
       <button
@@ -543,6 +635,8 @@ export default function App() {
           const availableAvatars = getAvailableAvatars(p.score);
           const nextUnlock = getNextAvatarUnlock(p.score);
           const progress = getProgressToNextAvatar(p.score);
+          const today = getToday();
+          const wheelUsedToday = p.lastSpinDate === today;
 
           return (
             <div className="card" key={p.id}>
@@ -620,6 +714,28 @@ export default function App() {
               >
                 ⭐ Give Star
               </button>
+
+              <div className="unlockBox">
+                <div className="nextUnlock">🎡 Daily Reward Wheel</div>
+                <div className="progressText">
+                  {wheelUsedToday
+                    ? "Come back tomorrow for another spin!"
+                    : "One free spin available today!"}
+                </div>
+
+                <button
+                  className="shopBtn"
+                  onClick={() => spinDailyWheel(p.id)}
+                  disabled={wheelUsedToday}
+                  style={{
+                    opacity: wheelUsedToday ? 0.5 : 1,
+                    cursor: wheelUsedToday ? "not-allowed" : "pointer",
+                    marginTop: "10px",
+                  }}
+                >
+                  {wheelUsedToday ? "🎡 Already Spun Today" : "🎡 Spin Wheel"}
+                </button>
+              </div>
 
               <div className="shop">
                 {shopItems.map((item, i) => (
