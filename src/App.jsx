@@ -111,6 +111,13 @@ export default function App() {
     return "💖 Kind Helper";
   };
 
+  const getAvatarAnimationClass = (score) => {
+    if (score >= 50) return "avatar avatarMagic";
+    if (score >= 25) return "avatar avatarRoyal";
+    if (score >= 10) return "avatar avatarStar";
+    return "avatar avatarFloat";
+  };
+
   const getAvailableAvatars = (score) => {
     return avatars.filter((avatar) => score >= avatar.unlockAt);
   };
@@ -499,7 +506,7 @@ export default function App() {
       </button>
 
       {showPinBox && !parentMode && (
-        <div className="unlockBox">
+        <div className="parentBox">
           <div className="nextUnlock">Enter Parent PIN</div>
 
           <input
@@ -511,19 +518,21 @@ export default function App() {
             placeholder="PIN"
           />
 
-          <button className="shopBtn" onClick={unlockParentMode}>
-            Unlock
-          </button>
+          <div className="parentButtons">
+            <button className="shopBtn" onClick={unlockParentMode}>
+              Unlock
+            </button>
 
-          <button
-            className="shopBtn"
-            onClick={() => {
-              setShowPinBox(false);
-              setPinInput("");
-            }}
-          >
-            Cancel
-          </button>
+            <button
+              className="shopBtn"
+              onClick={() => {
+                setShowPinBox(false);
+                setPinInput("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -537,11 +546,14 @@ export default function App() {
 
           return (
             <div className="card" key={p.id}>
-              <img
-                className="avatar"
-                src={`/avatars/${p.avatar || "princess.png"}`}
-                alt={`${p.name} avatar`}
-              />
+              <div className="avatarWrap">
+                <img
+                  className={getAvatarAnimationClass(p.score)}
+                  src={`/avatars/${p.avatar || "princess.png"}`}
+                  alt={`${p.name} avatar`}
+                />
+                <div className="avatarSparkles">✨ ✨ ✨</div>
+              </div>
 
               <select
                 className="avatarSelect"
