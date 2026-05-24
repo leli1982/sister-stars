@@ -15,6 +15,7 @@ export default function App() {
   const [levelUp, setLevelUp] = useState(null);
   const [mysteryReward, setMysteryReward] = useState(null);
   const [dailyReward, setDailyReward] = useState(null);
+  const [petCelebration, setPetCelebration] = useState(null);
   const [parentMode, setParentMode] = useState(false);
   const [showPinBox, setShowPinBox] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -26,6 +27,41 @@ export default function App() {
     { label: "Mermaid", value: "mermaid.png", unlockAt: 20 },
     { label: "Hero", value: "hero.png", unlockAt: 30 },
     { label: "Cat", value: "cat.png", unlockAt: 40 },
+  ];
+
+  const pets = [
+    {
+      label: "Baby Dragon",
+      value: "dragon",
+      egg: "🥚",
+      baby: "🐣",
+      growing: "🐉",
+      magic: "🐲",
+    },
+    {
+      label: "Mini Unicorn",
+      value: "unicorn",
+      egg: "🥚",
+      baby: "🦄",
+      growing: "🦄✨",
+      magic: "🌈🦄",
+    },
+    {
+      label: "Magic Kitty",
+      value: "kitty",
+      egg: "🥚",
+      baby: "🐱",
+      growing: "😺✨",
+      magic: "🐈‍⬛🌙",
+    },
+    {
+      label: "Moon Bunny",
+      value: "bunny",
+      egg: "🥚",
+      baby: "🐰",
+      growing: "🐇✨",
+      magic: "🌙🐰",
+    },
   ];
 
   const shopItems = [
@@ -52,7 +88,11 @@ export default function App() {
     { label: "🍭 Candy Bonus", stars: 0, item: "🍭 Candy Bonus" },
     { label: "🎨 Sticker Bonus", stars: 0, item: "🎨 Sticker Bonus" },
     { label: "🧸 Teddy Bonus", stars: 0, item: "🧸 Teddy Bonus" },
-    { label: "🌈 Rainbow Jackpot +15 Stars", stars: 15, item: "🌈 Rainbow Jackpot" },
+    {
+      label: "🌈 Rainbow Jackpot +15 Stars",
+      stars: 15,
+      item: "🌈 Rainbow Jackpot",
+    },
   ];
 
   const levels = [
@@ -89,6 +129,8 @@ export default function App() {
       streak: 0,
       lastStarDate: "",
       lastSpinDate: "",
+      pet: "dragon",
+      petHappiness: 60,
     },
     {
       id: "p2",
@@ -99,6 +141,8 @@ export default function App() {
       streak: 0,
       lastStarDate: "",
       lastSpinDate: "",
+      pet: "unicorn",
+      petHappiness: 60,
     },
   ]);
 
@@ -122,6 +166,27 @@ export default function App() {
     if (score >= 25) return "👑 Kind Hero";
     if (score >= 10) return "🌟 Star Friend";
     return "💖 Kind Helper";
+  };
+
+  const getPetStage = (score) => {
+    if (score >= 50) return "Magical";
+    if (score >= 25) return "Growing";
+    if (score >= 10) return "Baby";
+    return "Egg";
+  };
+
+  const getPetEmoji = (petValue, score) => {
+    const pet = pets.find((item) => item.value === petValue) || pets[0];
+
+    if (score >= 50) return pet.magic;
+    if (score >= 25) return pet.growing;
+    if (score >= 10) return pet.baby;
+    return pet.egg;
+  };
+
+  const getPetName = (petValue) => {
+    const pet = pets.find((item) => item.value === petValue);
+    return pet ? pet.label : "Baby Dragon";
   };
 
   const getAvatarAnimationClass = (score) => {
@@ -173,6 +238,9 @@ export default function App() {
         streak: p.streak || 0,
         lastStarDate: p.lastStarDate || "",
         lastSpinDate: p.lastSpinDate || "",
+        pet: p.pet || (index === 0 ? "dragon" : "unicorn"),
+        petHappiness:
+          typeof p.petHappiness === "number" ? p.petHappiness : 60,
       }));
 
       if (safePlayers.length > 0) {
@@ -264,7 +332,7 @@ export default function App() {
     }, 1000);
   };
 
-  const checkUnlocks = (playerName, oldScore, newScore) => {
+  const checkUnlocks = (playerName, oldScore, newScore, petValue) => {
     const unlockedAvatar = avatars.find(
       (avatar) =>
         oldScore < avatar.unlockAt && newScore >= avatar.unlockAt
@@ -273,6 +341,9 @@ export default function App() {
     const unlockedLevel = levels.find(
       (level) => oldScore < level.score && newScore >= level.score
     );
+
+    const oldPetStage = getPetStage(oldScore);
+    const newPetStage = getPetStage(newScore);
 
     if (unlockedLevel) {
       showLevelUpCelebration(playerName, unlockedLevel, newScore);
@@ -284,6 +355,23 @@ export default function App() {
       });
 
       showMessage(`🎉 New avatar unlocked: ${unlockedAvatar.label}!`);
+    }
+
+    if (oldPetStage !== newPetStage) {
+      setPetCelebration({
+        playerName,
+        petName: getPetName(petValue),
+        petEmoji: getPetEmoji(petValue, newScore),
+        stage: newPetStage,
+      });
+
+      confetti({
+        particleCount: 260,
+        spread: 180,
+        origin: { y: 0.55 },
+      });
+
+      playLevelUpSound();
     }
   };
 
@@ -320,12 +408,13 @@ export default function App() {
         origin: { y: 0.55 },
       });
 
-      checkUnlocks(p.name, oldScore, newScore);
+      checkUnlocks(p.name, oldScore, newScore, p.pet);
 
       return {
         ...p,
         score: newScore,
         inventory: newInventory,
+        petHappiness: Math.min((p.petHappiness || 60) + 5, 100),
         lastSpinDate: today,
       };
     });
@@ -370,13 +459,14 @@ export default function App() {
           );
         }
 
-        checkUnlocks(p.name, oldScore, newScore);
+        checkUnlocks(p.name, oldScore, newScore, p.pet);
 
         return {
           ...p,
           score: newScore,
           streak: newStreak,
           lastStarDate: today,
+          petHappiness: Math.min((p.petHappiness || 60) + 2, 100),
         };
       }
 
@@ -406,6 +496,48 @@ export default function App() {
       }
 
       return { ...p, avatar: value };
+    });
+
+    save(updated);
+  };
+
+  const updatePet = (id, value) => {
+    const updated = players.map((p) =>
+      p.id === id ? { ...p, pet: value } : p
+    );
+
+    save(updated);
+  };
+
+  const feedPet = (id) => {
+    const updated = players.map((p) => {
+      if (p.id !== id) return p;
+
+      if (p.score < 5) {
+        showMessage("❌ Need 5 stars to feed pet!");
+        return p;
+      }
+
+      confetti({
+        particleCount: 120,
+        spread: 100,
+        origin: { y: 0.6 },
+      });
+
+      playSound();
+
+      setPetCelebration({
+        playerName: p.name,
+        petName: getPetName(p.pet),
+        petEmoji: getPetEmoji(p.pet, p.score),
+        stage: "Happy",
+      });
+
+      return {
+        ...p,
+        score: p.score - 5,
+        petHappiness: Math.min((p.petHappiness || 60) + 20, 100),
+      };
     });
 
     save(updated);
@@ -472,7 +604,11 @@ export default function App() {
       return;
     }
 
-    if (window.confirm("Reset all stars, rewards, streaks, and daily spins?")) {
+    if (
+      window.confirm(
+        "Reset all stars, rewards, streaks, daily spins, and pets?"
+      )
+    ) {
       save(
         players.map((p, index) => ({
           ...p,
@@ -482,6 +618,8 @@ export default function App() {
           streak: 0,
           lastStarDate: "",
           lastSpinDate: "",
+          pet: index === 0 ? "dragon" : "unicorn",
+          petHappiness: 60,
         }))
       );
     }
@@ -570,6 +708,35 @@ export default function App() {
               }}
             >
               Amazing!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {petCelebration && (
+        <div className="levelUpOverlay">
+          <div className="levelUpCard" style={{ borderColor: "#8b2be2" }}>
+            <div className="levelUpStars">{petCelebration.petEmoji}</div>
+
+            <h2 style={{ color: "#8b2be2" }}>MAGICAL PET!</h2>
+
+            <p className="levelUpName">{petCelebration.playerName}</p>
+
+            <p className="levelUpScore">
+              {petCelebration.petName} is now:
+            </p>
+
+            <p className="levelUpTitle">{petCelebration.stage}</p>
+
+            <button
+              className="levelUpButton"
+              onClick={() => setPetCelebration(null)}
+              style={{
+                background: "#8b2be2",
+                boxShadow: `0 8px 0 rgba(0,0,0,0.25)`,
+              }}
+            >
+              Cute!
             </button>
           </div>
         </div>
@@ -697,6 +864,47 @@ export default function App() {
               <div className="level">{getLevel(p.score)}</div>
 
               <div className="score">⭐ {p.score}</div>
+
+              <div className="petBox">
+                <div className="petEmoji">
+                  {getPetEmoji(p.pet, p.score)}
+                </div>
+
+                <div className="nextUnlock">
+                  🐾 {getPetName(p.pet)} — {getPetStage(p.score)}
+                </div>
+
+                <select
+                  className="avatarSelect"
+                  value={p.pet || "dragon"}
+                  onChange={(e) => updatePet(p.id, e.target.value)}
+                >
+                  {pets.map((pet) => (
+                    <option key={pet.value} value={pet.value}>
+                      {pet.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="progressOuter">
+                  <div
+                    className="petHappinessInner"
+                    style={{ width: `${p.petHappiness || 0}%` }}
+                  />
+                </div>
+
+                <div className="progressText">
+                  Happiness: {p.petHappiness || 0}%
+                </div>
+
+                <button
+                  className="shopBtn"
+                  onClick={() => feedPet(p.id)}
+                  style={{ marginTop: "10px" }}
+                >
+                  🍎 Feed Pet (5 ⭐)
+                </button>
+              </div>
 
               <div className="unlockBox">
                 <div className="nextUnlock">
