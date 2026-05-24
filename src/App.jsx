@@ -8,10 +8,15 @@ import { doc, onSnapshot, setDoc } from "firebase/firestore";
 export default function App() {
   const docRef = doc(db, "game", "stars");
 
+  const PARENT_PIN = "1234";
+
   const [soundOn, setSoundOn] = useState(true);
   const [message, setMessage] = useState("");
   const [levelUp, setLevelUp] = useState(null);
   const [mysteryReward, setMysteryReward] = useState(null);
+  const [parentMode, setParentMode] = useState(false);
+  const [showPinBox, setShowPinBox] = useState(false);
+  const [pinInput, setPinInput] = useState("");
 
   const avatars = [
     { label: "Princess", value: "princess.png", unlockAt: 0 },
@@ -84,9 +89,7 @@ export default function App() {
     },
   ]);
 
-  const getToday = () => {
-    return new Date().toISOString().split("T")[0];
-  };
+  const getToday = () => new Date().toISOString().split("T")[0];
 
   const getYesterday = () => {
     const date = new Date();
@@ -126,7 +129,6 @@ export default function App() {
 
   const getProgressToNextAvatar = (score) => {
     const next = getNextAvatarUnlock(score);
-
     if (!next) return 100;
 
     const previous = getPreviousUnlock(score);
@@ -188,6 +190,25 @@ export default function App() {
   const showMessage = (text) => {
     setMessage(text);
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  const unlockParentMode = () => {
+    if (pinInput === PARENT_PIN) {
+      setParentMode(true);
+      setShowPinBox(false);
+      setPinInput("");
+      showMessage("🔓 Parent Mode unlocked");
+    } else {
+      setPinInput("");
+      showMessage("❌ Wrong PIN");
+    }
+  };
+
+  const lockParentMode = () => {
+    setParentMode(false);
+    setShowPinBox(false);
+    setPinInput("");
+    showMessage("🔒 Parent Mode locked");
   };
 
   const showLevelUpCelebration = (playerName, level, score) => {
@@ -375,6 +396,11 @@ export default function App() {
   };
 
   const resetAll = () => {
+    if (!parentMode) {
+      showMessage("🔒 Parent Mode required");
+      return;
+    }
+
     if (window.confirm("Reset all stars, rewards, and streaks?")) {
       save(
         players.map((p, index) => ({
@@ -458,6 +484,48 @@ export default function App() {
       >
         🔊 Sound: {soundOn ? "ON" : "OFF"}
       </button>
+
+      <button
+        className="soundBtn"
+        onClick={() => {
+          if (parentMode) {
+            lockParentMode();
+          } else {
+            setShowPinBox(true);
+          }
+        }}
+      >
+        {parentMode ? "🔒 Lock Parent Mode" : "🔐 Parent Mode"}
+      </button>
+
+      {showPinBox && !parentMode && (
+        <div className="unlockBox">
+          <div className="nextUnlock">Enter Parent PIN</div>
+
+          <input
+            className="nameInput"
+            type="password"
+            inputMode="numeric"
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value)}
+            placeholder="PIN"
+          />
+
+          <button className="shopBtn" onClick={unlockParentMode}>
+            Unlock
+          </button>
+
+          <button
+            className="shopBtn"
+            onClick={() => {
+              setShowPinBox(false);
+              setPinInput("");
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {message && <div className="popup">{message}</div>}
 
@@ -565,9 +633,11 @@ export default function App() {
         })}
       </div>
 
-      <button className="resetButton" onClick={resetAll}>
-        Reset
-      </button>
+      {parentMode && (
+        <button className="resetButton" onClick={resetAll}>
+          Reset
+        </button>
+      )}
     </div>
   );
 }
