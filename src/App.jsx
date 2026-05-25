@@ -19,6 +19,9 @@ export default function App() {
   const [parentMode, setParentMode] = useState(false);
   const [showPinBox, setShowPinBox] = useState(false);
   const [pinInput, setPinInput] = useState("");
+  const [currentChildId, setCurrentChildId] = useState(
+    localStorage.getItem("magicSisterCurrentChild") || ""
+  );
 
   const avatars = [
     { label: "Princess", value: "princess.png", unlockAt: 0 },
@@ -30,38 +33,10 @@ export default function App() {
   ];
 
   const pets = [
-    {
-      label: "Baby Dragon",
-      value: "dragon",
-      egg: "🥚",
-      baby: "🐣",
-      growing: "🐉",
-      magic: "🐲",
-    },
-    {
-      label: "Mini Unicorn",
-      value: "unicorn",
-      egg: "🥚",
-      baby: "🦄",
-      growing: "🦄✨",
-      magic: "🌈🦄",
-    },
-    {
-      label: "Magic Kitty",
-      value: "kitty",
-      egg: "🥚",
-      baby: "🐱",
-      growing: "😺✨",
-      magic: "🐈‍⬛🌙",
-    },
-    {
-      label: "Moon Bunny",
-      value: "bunny",
-      egg: "🥚",
-      baby: "🐰",
-      growing: "🐇✨",
-      magic: "🌙🐰",
-    },
+    { label: "Baby Dragon", value: "dragon", egg: "🥚", baby: "🐣", growing: "🐉", magic: "🐲" },
+    { label: "Mini Unicorn", value: "unicorn", egg: "🥚", baby: "🦄", growing: "🦄✨", magic: "🌈🦄" },
+    { label: "Magic Kitty", value: "kitty", egg: "🥚", baby: "🐱", growing: "😺✨", magic: "🐈‍⬛🌙" },
+    { label: "Moon Bunny", value: "bunny", egg: "🥚", baby: "🐰", growing: "🐇✨", magic: "🌙🐰" },
   ];
 
   const shopItems = [
@@ -88,11 +63,7 @@ export default function App() {
     { label: "🍭 Candy Bonus", stars: 0, item: "🍭 Candy Bonus" },
     { label: "🎨 Sticker Bonus", stars: 0, item: "🎨 Sticker Bonus" },
     { label: "🧸 Teddy Bonus", stars: 0, item: "🧸 Teddy Bonus" },
-    {
-      label: "🌈 Rainbow Jackpot +15 Stars",
-      stars: 15,
-      item: "🌈 Rainbow Jackpot",
-    },
+    { label: "🌈 Rainbow Jackpot +15 Stars", stars: 15, item: "🌈 Rainbow Jackpot" },
   ];
 
   const levels = [
@@ -221,6 +192,25 @@ export default function App() {
       ((score - previous) / (next.unlockAt - previous)) * 100;
 
     return Math.min(Math.max(progress, 0), 100);
+  };
+
+  const chooseCurrentChild = (id) => {
+    setCurrentChildId(id);
+    localStorage.setItem("magicSisterCurrentChild", id);
+    showMessage("✅ This tablet is now set");
+  };
+
+  const canGiveStarTo = (playerId) => {
+    if (parentMode) return true;
+    if (!currentChildId) return false;
+    return currentChildId !== playerId;
+  };
+
+  const getGiveStarButtonText = (playerId) => {
+    if (parentMode) return "⭐ Give Star";
+    if (!currentChildId) return "🔒 Choose who is using this tablet";
+    if (currentChildId === playerId) return "💖 Stars must come from sister";
+    return "⭐ Give Star";
   };
 
   useEffect(() => {
@@ -423,6 +413,15 @@ export default function App() {
   };
 
   const addStar = (id) => {
+    if (!canGiveStarTo(id)) {
+      if (!currentChildId) {
+        showMessage("🔒 First choose who is using this tablet");
+      } else {
+        showMessage("💖 You can only give stars to your sister");
+      }
+      return;
+    }
+
     const today = getToday();
     const yesterday = getYesterday();
 
@@ -795,6 +794,31 @@ export default function App() {
         </div>
       )}
 
+      <div className="parentBox">
+        <div className="nextUnlock">Who is using this tablet?</div>
+
+        <select
+          className="avatarSelect"
+          value={currentChildId}
+          onChange={(e) => chooseCurrentChild(e.target.value)}
+        >
+          <option value="">Choose child</option>
+          {players.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="progressText">
+          {parentMode
+            ? "Parent Mode can give stars to anyone."
+            : currentChildId
+            ? "This child can only give stars to her sister."
+            : "Choose a child before giving stars."}
+        </div>
+      </div>
+
       {message && <div className="popup">{message}</div>}
 
       <div className="grid">
@@ -804,6 +828,7 @@ export default function App() {
           const progress = getProgressToNextAvatar(p.score);
           const today = getToday();
           const wheelUsedToday = p.lastSpinDate === today;
+          const giveStarAllowed = canGiveStarTo(p.id);
 
           return (
             <div className="card" key={p.id}>
@@ -919,8 +944,13 @@ export default function App() {
               <button
                 className="starButton"
                 onClick={() => addStar(p.id)}
+                disabled={!giveStarAllowed}
+                style={{
+                  opacity: giveStarAllowed ? 1 : 0.5,
+                  cursor: giveStarAllowed ? "pointer" : "not-allowed",
+                }}
               >
-                ⭐ Give Star
+                {getGiveStarButtonText(p.id)}
               </button>
 
               <div className="unlockBox">
